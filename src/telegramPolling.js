@@ -81,6 +81,18 @@ class TelegramBotPolling {
   }
 
   /**
+   * Handle error thrown during polling.
+   * @private
+   * @param  {Error} error
+   */
+  _error(error) {
+    if (!this.bot.listeners('polling_error').length) {
+      return console.error(error); // eslint-disable-line no-console
+    }
+    return this.bot.emit('polling_error', error);
+  }
+
+  /**
    * Invokes polling (with recursion!)
    * @return {Promise} promise of the current request
    * @private
@@ -100,12 +112,25 @@ class TelegramBotPolling {
       })
       .catch(err => {
         debug('polling error: %s', err.message);
-        if (this.bot.listeners('polling_error').length) {
-          this.bot.emit('polling_error', err);
-        } else {
-          console.error(err); // eslint-disable-line no-console
+        /**
+         * We need to mark the already-processed items
+         * to avoid fetching them again once the application
+         * is restarted, or moves to next polling interval
+         * (in cases where unhandled rejections do not terminate
+         * the process).
+         * See https://github.com/yagop/node-telegram-bot-api/issues/36#issuecomment-268532067
+         */
+        if (!this.bot.options.badRejection) {
+          return this._error(err);
         }
-        return null;
+        const opts = {
+          offset: this.options.params.offset,
+          limit: 1,
+          timeout: 0,
+        };
+        return this.bot.getUpdates(opts).then(() => {
+          return this._error(err);
+        });
       })
       .finally(() => {
         if (this._abort) {
