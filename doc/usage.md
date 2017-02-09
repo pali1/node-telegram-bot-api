@@ -32,6 +32,7 @@
   1. `edited_channel_post_caption`
 1. `polling_error`: Error occurred during polling. See [polling errors](#polling-errors).
 1. `webhook_error`: Error occurred handling a webhook request. See [webhook errors](#webhook-errors).
+1. `error`: Unexpected error occurred, usually fatal!
 
 **Tip:** Its much better to listen a specific event rather than on
 `message` in order to stay safe from the content.
